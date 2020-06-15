@@ -14,7 +14,6 @@ echo 4.bin > /sys/class/fpga_manager/fpga0/firmware
 
 echo "fil_reg 11: `fil_reg 11`"
 
-
 scn_reg 22 0
 scn_reg 23 0
 
