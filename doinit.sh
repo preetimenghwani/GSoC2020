@@ -10,9 +10,12 @@ power_init.sh
 power_on.sh
 
 echo "loading gateware ..."
-echo 4.bin > /sys/class/fpga_manager/fpga0/firmware
+echo preeti_42.bin > /sys/class/fpga_manager/fpga0/firmware
 
 echo "fil_reg 11: `fil_reg 11`"
+echo "fil_regi 4: `fil_regi 4`"
+echo "fil_regi 8: `fil_regi 8`"
+
 
 scn_reg 22 0
 scn_reg 23 0
@@ -58,15 +61,31 @@ gamma_conf.sh
 scn_reg 31 3
 scn_reg 31 1
 
-./memtool -4 -F 0x55555555 0x18000000 0x01000000
+./memtool -2 -F 0x55555555 0x18000000 0x01000000
 ./memtool -4 -d 0x18000000 0x100
 
-fil_regi 4
+echo "fil_regi 4: `fil_regi 4`"
+echo "fil_regi 8: `fil_regi 8`"
 
 # enable fake data generation
 
 fil_reg 11 0xFC31F200
+# fil_reg 11 0xFC31F000
+fil_reg 11 0xFC01F010
+
 fil_reg 15 0x1000100
 
-fil_regi 4
-./memtool -4 -d 0x18000000 0x100
+echo "fil_regi 4: `fil_regi 4`"
+# echo "fil_regi 1: `fil_regi 1`"
+# echo "fil_regi 6: `fil_regi 6`"
+echo "fil_regi 8: `fil_regi 8`"
+echo "fil_regi 9: `fil_regi 9`"
+echo "fil_regi 10: `fil_regi 10`"
+echo "fil_regi 11: `fil_regi 11`"
+
+
+axiom-linear-conf.sh
+axiom-rcn-clear.py
+
+./memtool -8 -d 0x18000000 0x800
+
