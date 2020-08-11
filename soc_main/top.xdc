@@ -38,9 +38,9 @@ set_false_path -to [get_pins sync_*_inst*/shift_*/D]
 create_pblock pblock_writer
 add_cells_to_pblock [get_pblocks pblock_writer] [get_cells axihp_writer_inst]
 resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y65:SLICE_X31Y74}
-#resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y75:SLICE_X31Y84}
-#resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y65:SLICE_X31Y74}
-# resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y50:SLICE_X31Y59}
+resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y75:SLICE_X31Y84}
+resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y65:SLICE_X31Y74}
+ resize_pblock [get_pblocks pblock_writer] -add {SLICE_X26Y50:SLICE_X31Y59}
 
 create_pblock pblock_wagen
 add_cells_to_pblock [get_pblocks pblock_wagen] [get_cells waddr_gen_inst]
@@ -51,8 +51,8 @@ add_cells_to_pblock [get_pblocks pblock_wagen] [get_cells sync_wswitch_inst*]
 add_cells_to_pblock [get_pblocks pblock_wagen] [get_cells sync_wbuf*_inst]
 resize_pblock [get_pblocks pblock_wagen] -add {SLICE_X32Y60:SLICE_X37Y79}
 resize_pblock [get_pblocks pblock_wagen] -add {DSP48_X2Y24:DSP48_X2Y27}
-# resize_pblock [get_pblocks pblock_wagen] -add {SLICE_X22Y45:SLICE_X25Y49}
-# resize_pblock [get_pblocks pblock_wagen] -add {DSP48_X2Y20:DSP48_X2Y21}
+resize_pblock [get_pblocks pblock_wagen] -add {SLICE_X22Y45:SLICE_X25Y49}
+resize_pblock [get_pblocks pblock_wagen] -add {DSP48_X2Y20:DSP48_X2Y21}
 
 create_pblock pblock_wfifo
 add_cells_to_pblock [get_pblocks pblock_wfifo] [get_cells fifo_reset_inst0]
@@ -60,9 +60,9 @@ add_cells_to_pblock [get_pblocks pblock_wfifo] [get_cells FIFO_data_inst]
 resize_pblock [get_pblocks pblock_wfifo] -add {SLICE_X32Y70:SLICE_X43Y79}
 resize_pblock [get_pblocks pblock_wfifo] -add {RAMB18_X2Y28:RAMB18_X2Y31}
 resize_pblock [get_pblocks pblock_wfifo] -add {RAMB36_X2Y14:RAMB36_X2Y15}
-#resize_pblock [get_pblocks pblock_wfifo] -add {SLICE_X38Y65:SLICE_X49Y74}
-#resize_pblock [get_pblocks pblock_wfifo] -add {RAMB18_X2Y26:RAMB18_X2Y29}
-#resize_pblock [get_pblocks pblock_wfifo] -add {RAMB36_X2Y13:RAMB36_X2Y14}
+resize_pblock [get_pblocks pblock_wfifo] -add {SLICE_X38Y65:SLICE_X49Y74}
+resize_pblock [get_pblocks pblock_wfifo] -add {RAMB18_X2Y26:RAMB18_X2Y29}
+resize_pblock [get_pblocks pblock_wfifo] -add {RAMB36_X2Y13:RAMB36_X2Y14}
 
 create_pblock pblock_file0
 add_cells_to_pblock [get_pblocks pblock_file0] [get_cells reg_file_inst0]
@@ -175,15 +175,15 @@ resize_pblock [get_pblocks pblock_reme] -add {SLICE_X90Y110:SLICE_X91Y149}
 resize_pblock [get_pblocks pblock_reme] -add {SLICE_X84Y110:SLICE_X87Y149}
 resize_pblock [get_pblocks pblock_reme] -add {SLICE_X80Y110:SLICE_X81Y149}
 resize_pblock [get_pblocks pblock_reme] -add {SLICE_X62Y110:SLICE_X63Y139}
-#resize_pblock [get_pblocks pblock_reme] -add {SLICE_X62Y110:SLICE_X63Y139}
-#resize_pblock [get_pblocks pblock_reme] -add {SLICE_X66Y120:SLICE_X83Y149}
-#resize_pblock [get_pblocks pblock_reme] -add {SLICE_X90Y105:SLICE_X93Y139}
-#resize_pblock [get_pblocks pblock_reme] -add {RAMB36_X4Y25:RAMB36_X4Y29}
-#resize_pblock [get_pblocks pblock_reme] -add {RAMB18_X4Y50:RAMB18_X4Y59}
-# resize_pblock [get_pblocks pblock_reme] -add {SLICE_X80Y75:SLICE_X97Y99}
-# resize_pblock [get_pblocks pblock_reme] -add {SLICE_X80Y75:SLICE_X101Y99}
-# resize_pblock [get_pblocks pblock_reme] -add {RAMB36_X4Y15:RAMB36_X4Y19}
-# resize_pblock [get_pblocks pblock_reme] -add {RAMB18_X4Y30:RAMB18_X4Y39}
+resize_pblock [get_pblocks pblock_reme] -add {SLICE_X62Y110:SLICE_X63Y139}
+resize_pblock [get_pblocks pblock_reme] -add {SLICE_X66Y120:SLICE_X83Y149}
+resize_pblock [get_pblocks pblock_reme] -add {SLICE_X90Y105:SLICE_X93Y139}
+resize_pblock [get_pblocks pblock_reme] -add {RAMB36_X4Y25:RAMB36_X4Y29}
+resize_pblock [get_pblocks pblock_reme] -add {RAMB18_X4Y50:RAMB18_X4Y59}
+resize_pblock [get_pblocks pblock_reme] -add {SLICE_X80Y75:SLICE_X97Y99}
+resize_pblock [get_pblocks pblock_reme] -add {SLICE_X80Y75:SLICE_X101Y99}
+resize_pblock [get_pblocks pblock_reme] -add {RAMB36_X4Y15:RAMB36_X4Y19}
+resize_pblock [get_pblocks pblock_reme] -add {RAMB18_X4Y30:RAMB18_X4Y39}
 
 create_pblock pblock_remo
 add_cells_to_pblock [get_pblocks pblock_remo] [get_cells pixel_remap_odd_inst]
@@ -193,15 +193,15 @@ resize_pblock [get_pblocks pblock_remo] -add {SLICE_X90Y50:SLICE_X91Y89}
 resize_pblock [get_pblocks pblock_remo] -add {SLICE_X84Y50:SLICE_X87Y89}
 resize_pblock [get_pblocks pblock_remo] -add {SLICE_X80Y50:SLICE_X81Y89}
 resize_pblock [get_pblocks pblock_remo] -add {SLICE_X62Y60:SLICE_X63Y89}
-#resize_pblock [get_pblocks pblock_remo] -add {SLICE_X62Y60:SLICE_X63Y89}
-#resize_pblock [get_pblocks pblock_remo] -add {SLICE_X66Y50:SLICE_X83Y79}
-#resize_pblock [get_pblocks pblock_remo] -add {SLICE_X90Y60:SLICE_X93Y94}
-#resize_pblock [get_pblocks pblock_remo] -add {RAMB36_X4Y10:RAMB36_X4Y14}
-#resize_pblock [get_pblocks pblock_remo] -add {RAMB18_X4Y20:RAMB18_X4Y29}
-# resize_pblock [get_pblocks pblock_remo] -add {SLICE_X80Y50:SLICE_X97Y74}
-# resize_pblock [get_pblocks pblock_remo] -add {SLICE_X80Y50:SLICE_X101Y74}
-# resize_pblock [get_pblocks pblock_remo] -add {RAMB36_X4Y10:RAMB36_X4Y14}
-# resize_pblock [get_pblocks pblock_remo] -add {RAMB18_X4Y20:RAMB18_X4Y29}
+resize_pblock [get_pblocks pblock_remo] -add {SLICE_X62Y60:SLICE_X63Y89}
+resize_pblock [get_pblocks pblock_remo] -add {SLICE_X66Y50:SLICE_X83Y79}
+resize_pblock [get_pblocks pblock_remo] -add {SLICE_X90Y60:SLICE_X93Y94}
+resize_pblock [get_pblocks pblock_remo] -add {RAMB36_X4Y10:RAMB36_X4Y14}
+resize_pblock [get_pblocks pblock_remo] -add {RAMB18_X4Y20:RAMB18_X4Y29}
+resize_pblock [get_pblocks pblock_remo] -add {SLICE_X80Y50:SLICE_X97Y74}
+resize_pblock [get_pblocks pblock_remo] -add {SLICE_X80Y50:SLICE_X101Y74}
+resize_pblock [get_pblocks pblock_remo] -add {RAMB36_X4Y10:RAMB36_X4Y14}
+resize_pblock [get_pblocks pblock_remo] -add {RAMB18_X4Y20:RAMB18_X4Y29}
 
 create_pblock pblock_chop
 add_cells_to_pblock [get_pblocks pblock_chop] [get_cells fifo_chop_inst]
@@ -214,15 +214,15 @@ resize_pblock [get_pblocks pblock_chop] -add {SLICE_X64Y108:SLICE_X65Y149}
 resize_pblock [get_pblocks pblock_chop] -add {SLICE_X80Y104:SLICE_X93Y107}
 #resize_pblock [get_pblocks pblock_chop] -add {SLICE_X82Y108:SLICE_X85Y111}
 resize_pblock [get_pblocks pblock_chop] -add {SLICE_X94Y115:SLICE_X95Y149}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X80Y108:SLICE_X89Y109}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y80:SLICE_X55Y89}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y110:SLICE_X55Y119}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y50:SLICE_X61Y74}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y125:SLICE_X61Y149}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X60Y50:SLICE_X61Y149}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X66Y50:SLICE_X67Y99}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X80Y50:SLICE_X81Y99}
-# resize_pblock [get_pblocks pblock_chop] -add {SLICE_X64Y50:SLICE_X67Y99}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X80Y108:SLICE_X89Y109}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y80:SLICE_X55Y89}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y110:SLICE_X55Y119}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y50:SLICE_X61Y74}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X54Y125:SLICE_X61Y149}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X60Y50:SLICE_X61Y149}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X66Y50:SLICE_X67Y99}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X80Y50:SLICE_X81Y99}
+resize_pblock [get_pblocks pblock_chop] -add {SLICE_X64Y50:SLICE_X67Y99}
 
 # create_pblock pblock_div0
 # add_cells_to_pblock [get_pblocks pblock_div0] [get_cells -quiet [list div_lvds_inst0]]

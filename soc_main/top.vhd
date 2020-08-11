@@ -192,7 +192,8 @@ architecture RTL of top is
     -- LVDS IDELAY Signals
     --------------------------------------------------------------------
 
-    constant CHANNELS : natural := 32;
+    constant CHANNELS : natural := 64;
+    constant NUM_WRITERS : natural := 2;
 
     signal idelay_valid : std_logic;
     signal ser_out : std_logic_vector (CHANNELS + 1 downto 0)
@@ -369,78 +370,80 @@ architecture RTL of top is
     -- Writer Constants and Signals
     --------------------------------------------------------------------
 
-    signal wdata_clk : std_logic;
-    signal wdata_enable : std_logic;
-    signal wdata_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
-    signal wdata_empty : std_logic;
-
-    signal wdata_full : std_logic;
-
-    signal waddr_clk : std_logic;
-    signal waddr_enable : std_logic;
-    signal waddr_in : std_logic_vector (ADDR_WIDTH - 1 downto 0);
-    signal waddr_empty : std_logic;
-
-    signal waddr_match : std_logic;
-    signal waddr_sel : std_logic_vector (1 downto 0);
-    signal waddr_sel_in : std_logic_vector (1 downto 0);
-
-    signal wbuf_sel : std_logic_vector (1 downto 0);
-
-    alias writer_clk : std_logic is cmv_axi_clk;
-
-    signal writer_inactive : std_logic_vector (3 downto 0);
-    signal writer_error : std_logic_vector (3 downto 0);
-
-    signal writer_active : std_logic_vector (3 downto 0);
-    signal writer_unconf : std_logic_vector (3 downto 0);
-
-    signal waddr_reset : std_logic;
-    signal waddr_load : std_logic;
-    signal waddr_switch : std_logic;
-    signal waddr_block : std_logic;
+    type arr_dwidth is array (NUM_WRITERS-1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 0);
+    type arr_addrwidth is array (NUM_WRITERS-1 downto 0) of  std_logic_vector(ADDR_WIDTH-1 downto 0);
+    type arr_2 is array (NUM_WRITERS-1 downto 0) of  std_logic_vector(1 downto 0);
+ 
+     signal wdata_clk : std_logic_vector(NUM_WRITERS-1 downto 0);
+     signal wdata_enable : std_logic_vector(NUM_WRITERS-1 downto 0);
+     signal wdata_in : arr_dwidth;
+     signal wdata_empty : std_logic_vector(NUM_WRITERS-1 downto 0);
+ 
+     signal wdata_full : std_logic_vector(NUM_WRITERS-1 downto 0);
+ 
+     signal waddr_clk : std_logic_vector(NUM_WRITERS-1 downto 0);
+     signal waddr_enable : std_logic_vector(NUM_WRITERS-1 downto 0);
+     signal waddr_in : arr_addrwidth;
+     signal waddr_empty : std_logic_vector(NUM_WRITERS-1 downto 0);
+ 
+     signal waddr_match : std_logic_vector(NUM_WRITERS-1 downto 0);
+     signal waddr_sel : arr_2;
+     signal waddr_sel_in : arr_2;
+ 
+     signal wbuf_sel : arr_2;
+ 
+     alias writer_clk : std_logic is cmv_axi_clk;
+ 
+     signal writer_inactive : std_logic_vector (3 downto 0);
+     signal writer_error : std_logic_vector (3 downto 0);
+ 
+     signal writer_active : std_logic_vector (3 downto 0);
+     signal writer_unconf : std_logic_vector (3 downto 0);
+ 
+     signal waddr_reset : std_logic;
+     signal waddr_load : std_logic;
+     signal waddr_switch : std_logic;
+     signal waddr_block : std_logic;
 
     --------------------------------------------------------------------
     -- Data FIFO Signals
     --------------------------------------------------------------------
 
-    signal fifo_data_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
-    signal fifo_data_out : std_logic_vector (DATA_WIDTH - 1 downto 0);
+    signal fifo_data_in : arr_dwidth;
+    signal fifo_data_out : arr_dwidth;
 
     constant DATA_CWIDTH : natural := cwidth_f(DATA_WIDTH, "36Kb");
+    type arr_dcwidth is array (NUM_WRITERS-1 downto 0) of std_logic_vector(DATA_CWIDTH-1 downto 0);
 
-    signal fifo_data_rdcount : std_logic_vector (DATA_CWIDTH - 1 downto 0);
-    signal fifo_data_wrcount : std_logic_vector (DATA_CWIDTH - 1 downto 0);
+    signal fifo_data_rdcount : arr_dcwidth;
+    signal fifo_data_wrcount : arr_dcwidth;
 
-    signal fifo_data_wclk : std_logic;
-    signal fifo_data_wen : std_logic;
-    signal fifo_data_high : std_logic;
-    signal fifo_data_full : std_logic;
-    signal fifo_data_wrerr : std_logic;
+    signal fifo_data_wclk : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_wen : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_high : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_full : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_wrerr : std_logic_vector(NUM_WRITERS-1 downto 0);
 
-    signal fifo_data_rclk : std_logic;
-    signal fifo_data_ren : std_logic;
-    signal fifo_data_low : std_logic;
-    signal fifo_data_empty : std_logic;
-    signal fifo_data_rderr : std_logic;
+    signal fifo_data_rclk : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_ren : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_low : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_empty : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_rderr : std_logic_vector(NUM_WRITERS-1 downto 0);
 
-    signal fifo_data_rst : std_logic;
-    signal fifo_data_rrdy : std_logic;
-    signal fifo_data_wrdy : std_logic;
+    signal fifo_data_rst : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_rrdy : std_logic_vector(NUM_WRITERS-1 downto 0);
+    signal fifo_data_wrdy : std_logic_vector(NUM_WRITERS-1 downto 0);
 
-    signal data_ctrl : std_logic_vector (11 downto 0);
+    signal data_ctrl : std_logic_vector( 23 downto 0);
 
     alias data_dval : std_logic is data_ctrl(0);
     alias data_lval : std_logic is data_ctrl(1);
     alias data_fval : std_logic is data_ctrl(2);
 
     signal match_en : std_logic;
+    signal data_wen : std_logic_vector(NUM_WRITERS -1  downto 0);
 
-
-    signal data_wen : std_logic_vector (0 downto 0);
-    signal data_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
-
-    signal data_rcn : std_logic_vector (DATA_WIDTH - 1 downto 0);
+    signal data_in : arr_dwidth;
 
 
     signal cmv_active : std_logic;
@@ -849,7 +852,7 @@ begin
 
     reg_ireg(0) <= x"524547" & x"0" &
 		   std_logic_vector(to_unsigned(REG_SPLIT, 4));
-    reg_ireg(4) <= waddr_in(31 downto 0);
+   -- reg_ireg(4) <= waddr_in(31 downto 0);
 		   
     ser_to_par_inst : entity work.ser_to_par
 	generic map (
@@ -881,77 +884,81 @@ begin
     -- Address Generator
     --------------------------------------------------------------------
 
-    waddr_gen_inst : entity work.addr_qbuf
-	port map (
-	    clk => waddr_clk,      
-	    reset => waddr_reset, 
-	    load => waddr_load,   
-	    enable => waddr_enable, 
-	    --
-	    sel_in => "00", 
-	    switch => '0',
-	    --
-	    buf0_addr => waddr_buf0, 
-	    buf1_addr => waddr_buf1, 
-	    buf2_addr => waddr_buf2, 
-	    buf3_addr => waddr_buf3, 
-	    --
-	    col_inc => waddr_cinc, 
-	    col_cnt => waddr_ccnt,  
-	    --
-	    row_inc => waddr_rinc, 
-	    --
-	    buf0_epat => waddr_pat0, 
-	    buf1_epat => waddr_pat1, 
-	    buf2_epat => waddr_pat2, 
-	    buf3_epat => waddr_pat3,  
-	    --
-	    addr => waddr_in, 
-	    match => waddr_match, 
-	    sel => waddr_sel );    
-
-    waddr_empty <= waddr_match or waddr_block;
+    gen_waddr : for I in NUM_WRITERS - 1 downto 0 generate
+        waddr_gen_inst : entity work.addr_qbuf
+            port map (
+                clk => waddr_clk(I),
+                reset => waddr_reset,
+                load => waddr_load,
+                enable => waddr_enable(I),
+                --
+                sel_in => waddr_sel_in(I),
+                switch => waddr_switch,
+                --
+                buf0_addr => waddr_buf0,
+                buf1_addr => waddr_buf1,
+                buf2_addr => waddr_buf2,
+                buf3_addr => waddr_buf3,
+                --
+                col_inc => waddr_cinc,
+                col_cnt => waddr_ccnt,
+                --
+                row_inc => waddr_rinc,
+                --
+                buf0_epat => waddr_pat0,
+                buf1_epat => waddr_pat1,
+                buf2_epat => waddr_pat2,
+                buf3_epat => waddr_pat3,
+                --
+                addr => waddr_in(I),
+                match => waddr_match(I),
+                sel => waddr_sel(I) );
+    
+        waddr_empty(I) <= waddr_match(I) or waddr_block;
+        end generate;
 
     --------------------------------------------------------------------
     -- Data FIFO
     --------------------------------------------------------------------
 
-    FIFO_data_inst : FIFO_DUALCLOCK_MACRO
-	generic map (
-	    DEVICE => "7SERIES",
-	    DATA_WIDTH => DATA_WIDTH,
-	    ALMOST_FULL_OFFSET => x"020",
-	    ALMOST_EMPTY_OFFSET => x"020",
-	    FIFO_SIZE => "36Kb",
-	    FIRST_WORD_FALL_THROUGH => TRUE )
-	port map (
-	    DI => fifo_data_in,
-	    WRCLK => fifo_data_wclk,
-	    WREN => fifo_data_wen,
-	    FULL => fifo_data_full,
-	    ALMOSTFULL => fifo_data_high,
-	    WRERR => fifo_data_wrerr,
-	    WRCOUNT => fifo_data_wrcount,
-	    --
-	    DO => fifo_data_out,
-	    RDCLK => fifo_data_rclk,
-	    RDEN => fifo_data_ren,
-	    EMPTY => fifo_data_empty,
-	    ALMOSTEMPTY => fifo_data_low,
-	    RDERR => fifo_data_rderr,
-	    RDCOUNT => fifo_data_rdcount,
-	    --
-	    RST => fifo_data_rst );
-
-    fifo_reset_inst0 : entity work.fifo_reset
-	port map (
-	    rclk => fifo_data_rclk,
-	    wclk => fifo_data_wclk,
-	    reset => fifo_data_reset,
-	    --
-	    fifo_rst => fifo_data_rst,
-	    fifo_rrdy => fifo_data_rrdy,
-	    fifo_wrdy => fifo_data_wrdy );
+    gen_fifo : for I in NUM_WRITERS - 1 downto 0 generate
+        FIFO_data_inst : FIFO_DUALCLOCK_MACRO
+            generic map (
+                DEVICE => "7SERIES",
+                DATA_WIDTH => DATA_WIDTH,
+                ALMOST_FULL_OFFSET => x"020",
+                ALMOST_EMPTY_OFFSET => x"020",
+                FIFO_SIZE => "36Kb",
+                FIRST_WORD_FALL_THROUGH => TRUE )
+            port map (
+                DI => fifo_data_in(I),
+                WRCLK => fifo_data_wclk(0),
+                WREN => fifo_data_wen(I),
+                FULL => fifo_data_full(I),
+                ALMOSTFULL => fifo_data_high(I),
+                WRERR => fifo_data_wrerr(I),
+                WRCOUNT => fifo_data_wrcount(I),
+                --
+                DO => fifo_data_out(I),
+                RDCLK => fifo_data_rclk(I),
+                RDEN => fifo_data_ren(I),
+                EMPTY => fifo_data_empty(I),
+                ALMOSTEMPTY => fifo_data_low(I),
+                RDERR => fifo_data_rderr(I),
+                RDCOUNT => fifo_data_rdcount(I),
+                --
+                RST => fifo_data_rst(I) );
+    
+        fifo_reset_inst0 : entity work.fifo_reset
+            port map (
+                rclk => fifo_data_rclk(I),
+                wclk => fifo_data_wclk(I),
+                reset => fifo_data_reset,
+                --
+                fifo_rst => fifo_data_rst(I),
+                fifo_rrdy => fifo_data_rrdy(I),
+                fifo_wrdy => fifo_data_wrdy(I) );
+        end generate;
 
 
     conf_delay_proc : process (serdes_clkdiv)
@@ -1000,10 +1007,10 @@ begin
 	    --
 	    dv_par   => par_valid_d,
 	    ctrl_in  => par_ctrl_d,
-	    par_din  => par_data_e(15 downto 0),
+	    par_din  => par_data_e(31 downto 0),
 	    --
 	    ctrl_out => map_ctrl,
-	    par_dout => map_data(15 downto 0) );
+	    par_dout => map_data(31 downto 0) );
 
     pixel_remap_odd_inst : entity work.pixel_remap
 	  generic map (
@@ -1013,10 +1020,10 @@ begin
 	    --
 	    dv_par   => par_valid_d,
 	    ctrl_in  => par_ctrl_d,
-	    par_din  => par_data_o(31 downto 16),
+	    par_din  => par_data_o(63 downto 32),
 	    --
 	    ctrl_out => open,
-	    par_dout => map_data(31 downto 16) );
+	    par_dout => map_data(63 downto 32) );
 
     valid_proc : process (serdes_clkdiv)
     begin
@@ -1034,94 +1041,86 @@ begin
 	if rising_edge(serdes_clkdiv) then
 	    remap_ctrl <= map_ctrl;
 	    remap_data <=
-		map_data(30 downto 30) & map_data(31 downto 31) &
-		map_data(14 downto 14) & map_data(15 downto 15) &
-		map_data(28 downto 28) & map_data(29 downto 29) &
-		map_data(12 downto 12) & map_data(13 downto 13) &
-		map_data(26 downto 26) & map_data(27 downto 27) &
-		map_data(10 downto 10) & map_data(11 downto 11) &
-		map_data(24 downto 24) & map_data(25 downto 25) &
-		map_data( 8 downto  8) & map_data( 9 downto  9) &
-		map_data(22 downto 22) & map_data(23 downto 23) &
-		map_data( 6 downto  6) & map_data( 7 downto  7) &
-		map_data(20 downto 20) & map_data(21 downto 21) &
-		map_data( 4 downto  4) & map_data( 5 downto  5) &
-		map_data(18 downto 18) & map_data(19 downto 19) &
-		map_data( 2 downto  2) & map_data( 3 downto  3) &
-		map_data(16 downto 16) & map_data(17 downto 17) &
-		map_data( 0 downto  0) & map_data( 1 downto  1);
+		map_data;
 	end if;
     end process;
 
-    fifo_chop_inst : entity work.fifo_chop (RTL_SHIFT)
-	port map (
-	    par_clk => serdes_clk,
-	    par_enable => par_enable,
-	    par_data => remap_data,
-	    --
-	    par_ctrl => remap_ctrl,
-	    --
-	    fifo_clk => fifo_data_wclk,
-	    fifo_enable => data_wen(0),
-	    fifo_data => data_in,
-	    --
-	    fifo_ctrl => data_ctrl );
+    gen_chop : for I in NUM_WRITERS - 1 downto 0 generate
+        fifo_chop_inst : entity work.fifo_chop (RTL_SHIFT)
+            port map (
+                par_clk => serdes_clk,
+                par_enable => par_enable,
+                par_data => remap_data(((I+1) * 32) - 1 downto I * 32),
+                --
+                par_ctrl => remap_ctrl,
+                --
+                fifo_clk => fifo_data_wclk(I),
+                fifo_enable => data_wen(I),
+                fifo_data => data_in(I),
+                --
+                fifo_ctrl => data_ctrl(((I + 1) * 12)-1 downto I * 12));
+        end generate;
 
-
-     cmv_active <= or_reduce(data_ctrl(2 downto 0) and reg_amsk);
-
-    fifo_data_wen <= data_wen(0) and data_ctrl(2) and data_ctrl(1) 
-	and data_ctrl(0) when fifo_data_wrdy = '1' else '0';
-    fifo_data_in <= data_in;
-
-    fifo_data_rclk <= wdata_clk;
-    fifo_data_ren <=
-	wdata_enable and not fifo_data_empty when
-	    fifo_data_rrdy = '1' else '0';
-    wdata_empty <=
-	fifo_data_low when
-	    fifo_data_rrdy = '1' else
-	'0' when 
-	    fifo_data_rrdy = '1' else '1';
-   wdata_in <= fifo_data_out;
+            gen_fifo_ctrl : for I in NUM_WRITERS - 1 downto 0 generate
+    
+                cmv_active <= or_reduce(data_ctrl(2 downto 0) and reg_amsk);
+            
+                fifo_data_wen(I) <= data_wen(I) and data_ctrl(2) and data_ctrl(1) 
+                and data_ctrl(0);
+                wdata_full(I) <= fifo_data_full(I) when fifo_data_wrdy(I) = '1' else '1';
+                fifo_data_in(I) <= data_in(I);
+            
+                fifo_data_rclk(I) <= wdata_clk(I);
+                fifo_data_ren(I) <=
+                    wdata_enable(I) and not fifo_data_empty(I) when
+                        fifo_data_rrdy(I) = '1' else '0';
+                wdata_empty(I) <=
+                    fifo_data_low(I) when
+                        fifo_data_rrdy(I) = '1'  else
+                    '0' when 
+                        fifo_data_rrdy(I) = '1'  else '1';
+                wdata_in(I) <= fifo_data_out(I);
+        end generate;
 
 
     --------------------------------------------------------------------
     -- AXIHP Writer
     --------------------------------------------------------------------
 
-    axihp_writer_inst : entity work.axihp_writer
-	generic map (
-	    DATA_WIDTH => 64,
-	    DATA_COUNT => 16,
-	    ADDR_MASK => WADDR_MASK(0),
-	    ADDR_DATA => WADDR_BASE(1) )
-	port map (
-	    m_axi_aclk => writer_clk,		-- in --
-	    m_axi_areset_n => s_axi_areset_n(1), -- in --
-	    enable => writer_enable(1),		-- in --
-	    inactive => writer_inactive(1),	-- out neg
-	    --
-	    m_axi_wo => s_axi_wi(1),
-	    m_axi_wi => s_axi_wo(1),
-	    --
-	    addr_clk => waddr_clk,		-- out --
-	    addr_enable => waddr_enable,	-- out -- 
-	    addr_in => waddr_in,		-- in  --
-	    addr_empty => waddr_empty,		-- in  --- from scripts
-	    --
-	    data_clk => wdata_clk,		-- out  --
-	    data_enable => wdata_enable,	-- out --
-	    data_in => wdata_in,		-- in  --
-	    data_empty => wdata_empty,		-- in  --
-	    --
-	    write_strobe => write_strobe,	-- in --
-	    --
-	    writer_error => writer_error(0),	-- out --
-	    writer_active => writer_active,	-- out --
-	    writer_unconf => writer_unconf );	-- out --
-
-    s_axi_aclk(1) <= writer_clk;
+    gen_writer : for I in NUM_WRITERS - 1 downto 0 generate
+        axihp_writer_inst : entity work.axihp_writer
+            generic map (
+                DATA_WIDTH => 64,
+                DATA_COUNT => 16,
+                ADDR_MASK => WADDR_MASK(0),
+                ADDR_DATA => WADDR_BASE(I) )
+            port map (
+                m_axi_aclk => writer_clk,		
+                m_axi_areset_n => s_axi_areset_n(I), 
+                enable => writer_enable(I),		
+                inactive => writer_inactive(I),	
+                --
+                m_axi_wo => s_axi_wi(I),
+                m_axi_wi => s_axi_wo(I),
+                --
+                addr_clk => waddr_clk(I),
+                addr_enable => waddr_enable(I),	
+                addr_in => waddr_in(I),		
+                addr_empty => waddr_empty(I),	
+                --
+		data_clk => wdata_clk(I),
+                data_enable => wdata_enable(I),	
+                data_in => wdata_in(I),		
+                data_empty => wdata_empty(I),		
+                --
+		write_strobe => write_strobe,	
+                --
+		writer_error => writer_error(0),	
+		writer_active => writer_active,	
+		writer_unconf => writer_unconf );	
+    
+        s_axi_aclk(I) <= writer_clk;
+        end generate;
 
     waddr_block <=  oreg_wblock;
     waddr_reset <=  oreg_wreset;
