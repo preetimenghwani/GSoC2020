@@ -12,14 +12,14 @@ set_param place.sliceLegEffortLimit 2000
 # STEP#1: setup design sources and constraints
 
 read_vhdl -vhdl2008 ../addr_gen.vhd
-read_vhdl -vhdl2008 ../addr_dbuf.vhd
+# read_vhdl -vhdl2008 ../addr_dbuf.vhd
 read_vhdl -vhdl2008 ../addr_qbuf.vhd
 # read_vhdl -vhdl2008 ../async_div.vhd
 # read_vhdl -vhdl2008 ../axihp_reader.vhd
 read_vhdl -vhdl2008 ../axihp_writer.vhd
 read_vhdl -vhdl2008 ../axi_lite.vhd
 read_vhdl -vhdl2008 ../axi_split.vhd
-read_vhdl -vhdl2008 ../axi_split4.vhd
+# read_vhdl -vhdl2008 ../axi_split4.vhd
 read_vhdl -vhdl2008 ../axi_split8.vhd
 # read_vhdl -vhdl2008 ../bram_lut.vhd
 # read_vhdl -vhdl2008 ../cfg_lut5.vhd
