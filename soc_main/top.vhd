@@ -1036,8 +1036,7 @@ begin
     begin
 	if rising_edge(serdes_clkdiv) then
 	    remap_ctrl <= map_ctrl;
-	    remap_data <=
-		map_data;
+	    remap_data <= map_data;
 	end if;
     end process;
 
@@ -1115,7 +1114,7 @@ begin
 		writer_unconf => writer_unconf );	
     
         s_axi_aclk(I) <= writer_clk;
-        end generate;
+    end generate;
 
     waddr_block <=  oreg_wblock;
     waddr_reset <=  oreg_wreset;
