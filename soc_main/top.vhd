@@ -732,7 +732,6 @@ begin
 	    s_axi3_bvalid => s_axi_wo(3).bvalid,
 	    s_axi3_bready => s_axi_wi(3).bready );
 
-
     clk_100 <= ps_fclk(0);
 
     --------------------------------------------------------------------
@@ -1061,27 +1060,26 @@ begin
                 fifo_ctrl => data_ctrl(((I + 1) * 12)-1 downto I * 12));
         end generate;
 
-            gen_fifo_ctrl : for I in NUM_WRITERS - 1 downto 0 generate
-    
-                cmv_active <= or_reduce(data_ctrl(2 downto 0) and reg_amsk);
-            
-                fifo_data_wen(I) <= data_wen(I) and data_ctrl(2) and data_ctrl(1) 
-                and data_ctrl(0);
-                wdata_full(I) <= fifo_data_full(I) when fifo_data_wrdy(I) = '1' else '1';
-                fifo_data_in(I) <= data_in(I);
-            
-                fifo_data_rclk(I) <= wdata_clk(I);
-                fifo_data_ren(I) <=
-                    wdata_enable(I) and not fifo_data_empty(I) when
-                        fifo_data_rrdy(I) = '1' else '0';
-                wdata_empty(I) <=
-                    fifo_data_low(I) when
-                        fifo_data_rrdy(I) = '1'  else
-                    '0' when 
-                        fifo_data_rrdy(I) = '1'  else '1';
-                wdata_in(I) <= fifo_data_out(I);
-        end generate;
+    gen_fifo_ctrl : for I in NUM_WRITERS - 1 downto 0 generate
 
+	cmv_active <= or_reduce(data_ctrl(2 downto 0) and reg_amsk);
+
+	fifo_data_wen(I) <= data_wen(I) and data_ctrl(2) and data_ctrl(1) 
+	and data_ctrl(0);
+	wdata_full(I) <= fifo_data_full(I) when fifo_data_wrdy(I) = '1' else '1';
+	fifo_data_in(I) <= data_in(I);
+
+	fifo_data_rclk(I) <= wdata_clk(I);
+	fifo_data_ren(I) <=
+	    wdata_enable(I) and not fifo_data_empty(I) when
+		fifo_data_rrdy(I) = '1' else '0';
+	wdata_empty(I) <=
+	    fifo_data_low(I) when
+		fifo_data_rrdy(I) = '1'  else
+	    '0' when 
+		fifo_data_rrdy(I) = '1'  else '1';
+	wdata_in(I) <= fifo_data_out(I);
+    end generate;
 
     --------------------------------------------------------------------
     -- AXIHP Writer
