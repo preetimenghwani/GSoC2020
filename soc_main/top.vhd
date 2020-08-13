@@ -445,7 +445,6 @@ architecture RTL of top is
 
     signal data_in : arr_dwidth;
 
-
     signal cmv_active : std_logic;
 
 
@@ -873,7 +872,6 @@ begin
 	variable phase_v : std_logic := '0';
     begin
 	serdes_phase <= phase_v;
-
 	if rising_edge(serdes_clkdiv) then
 	    phase_v := not phase_v;
 	end if;
@@ -958,7 +956,6 @@ begin
                 fifo_rrdy => fifo_data_rrdy(I),
                 fifo_wrdy => fifo_data_wrdy(I) );
         end generate;
-
 
     conf_delay_proc : process (serdes_clkdiv)
 	type del_a is array (natural range <>) of
