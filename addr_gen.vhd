@@ -1,18 +1,3 @@
-----------------------------------------------------------------------------
---  addr_gen.vhd
---	Address Generator
---	Version 1.5
---
---  Copyright (C) 2013 H.Poetzl
---
---	This program is free software: you can redistribute it and/or
---	modify it under the terms of the GNU General Public License
---	as published by the Free Software Foundation, either version
---	2 of the License, or (at your option) any later version.
---
-----------------------------------------------------------------------------
-
-
 library IEEE;
 use IEEE.std_logic_1164.ALL;
 use IEEE.numeric_std.ALL;
@@ -48,7 +33,8 @@ architecture RTL of addr_gen is
 
     attribute KEEP_HIERARCHY of RTL : architecture is "TRUE";
 
-    signal detect : std_logic := '0';
+    signal detect : std_logic;
+    signal first : std_logic := '0';
     signal ccnt : std_logic_vector(COUNT_WIDTH - 1 downto 0) := (others => '0');
     signal addr_accum : std_logic_vector(ADDR_WIDTH - 1 downto 0) := (others => '0');
 
@@ -59,8 +45,8 @@ begin
 	if rising_edge(clk) then
 	    if load = '1' then
 		ccnt <= (others => '1');
-		addr_accum <= (others => '0'); --addr_in;
-		detect <= '0';
+		addr_accum <= addr_in;
+                first <= '1';
 
 	    elsif enable = '1' then
 		if ccnt  = col_cnt then
@@ -71,16 +57,14 @@ begin
 		    addr_accum <= addr_accum + col_inc;
 		    ccnt <= ccnt + "1";
 
-		end if;
-		if addr_accum = pattern then
-		    detect <= '1';
-
-		end if; 
+                end if;
+                first <= '0'; 
 	    end if;
 	end if;
     end process;
 
+    detect <= '1' when addr_accum = pattern else'0';
     addr <= addr_accum;
-    match <= detect;
+    match <= detect and not first;
 
 end RTL;
