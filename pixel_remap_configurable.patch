@@ -1,0 +1,412 @@
+diff -ru cmv_hdmi3_preeti_orig/cmv_pll.vhd cmv_hdmi3_preeti_rggb_conf/cmv_pll.vhd
+--- cmv_hdmi3_preeti_orig/cmv_pll.vhd	2020-08-30 20:39:21.876260702 +0530
++++ cmv_hdmi3_preeti_rggb_conf/cmv_pll.vhd	2020-08-31 19:01:50.115538563 +0530
+@@ -36,6 +36,76 @@
+ end entity cmv_pll;
+ 
+ 
++architecture RTL_500MHZ of cmv_pll is
++
++    signal pll_fbout : std_logic;
++    signal pll_fbin : std_logic;
++
++    signal pll_lvds_clk : std_logic;
++    signal pll_cmv_clk : std_logic;
++    signal pll_spi_clk : std_logic;
++    signal pll_axi_clk : std_logic;
++    signal pll_dly_clk : std_logic;
++
++begin
++    mmcm_inst : MMCME2_BASE
++    generic map (
++	BANDWIDTH => "OPTIMIZED",
++	CLKIN1_PERIOD => 10.0,
++	CLKFBOUT_MULT_F => 10.0,
++	CLKOUT0_DIVIDE_F => 2.00,	-- 500MHz CMV LVDS clock
++	CLKOUT1_DIVIDE => 1000/250*12,	-- 20.8MHz CMV input [5-30MHz]
++	CLKOUT2_DIVIDE => 1000/10,	-- 10.0MHz CMV SPI [0-30MHz]
++	CLKOUT3_DIVIDE => 1000/200,	-- 200MHz AXI HP clock
++	CLKOUT4_DIVIDE => 1000/200,	-- 200MHz delay ref clock
++	--
++	CLKOUT0_PHASE => 0.0,
++	CLKOUT1_PHASE => 0.0,
++	CLKOUT2_PHASE => 0.0,
++	CLKOUT3_PHASE => 0.0,
++	CLKOUT4_PHASE => 0.0,
++	--
++	DIVCLK_DIVIDE => 1 )
++    port map (
++	CLKIN1 => ref_clk_in,
++	CLKFBOUT => pll_fbout,
++	CLKFBIN => pll_fbin,
++
++	CLKOUT0 => pll_lvds_clk,
++	CLKOUT1 => pll_cmv_clk,
++	CLKOUT2 => pll_spi_clk,
++	CLKOUT3 => pll_axi_clk,
++	CLKOUT4 => pll_dly_clk,
++
++	LOCKED => pll_locked,
++	PWRDWN => '0',
++	RST => '0' );
++
++    pll_fbin <= pll_fbout;
++    lvds_clk <= pll_lvds_clk;
++
++    BUFG_cmv_inst : BUFG
++	port map (
++	    I => pll_cmv_clk,
++	    O => cmv_clk );
++
++    BUFG_spi_inst : BUFG
++	port map (
++	    I => pll_spi_clk,
++	    O => spi_clk );
++
++    BUFG_axi_inst : BUFG
++	port map (
++	    I => pll_axi_clk,
++	    O => axi_clk );
++
++    BUFG_dly_inst : BUFG
++	port map (
++	    I => pll_dly_clk,
++	    O => dly_clk );
++
++end RTL_500MHZ;
++
+ architecture RTL_300MHZ of cmv_pll is
+ 
+     signal pll_fbout : std_logic;
+diff -ru cmv_hdmi3_preeti_orig/cmv_serdes.vhd cmv_hdmi3_preeti_rggb_conf/cmv_serdes.vhd
+--- cmv_hdmi3_preeti_orig/cmv_serdes.vhd	2020-08-11 21:40:08.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/cmv_serdes.vhd	2020-08-30 19:24:00.316131000 +0530
+@@ -51,7 +51,7 @@
+ 
+     ISERDES_master_inst : ISERDESE2
+ 	generic map (
+-	    DATA_RATE		=> "SDR",
++	    DATA_RATE		=> "DDR",
+ 	    DATA_WIDTH		=> 6,
+ 	    INTERFACE_TYPE	=> "NETWORKING",
+ 	    IOBDELAY		=> "IFD",
+Only in cmv_hdmi3_preeti_rggb_conf/: fifo_chop16.vhd
+diff -ru cmv_hdmi3_preeti_orig/lvds_pll.vhd cmv_hdmi3_preeti_rggb_conf/lvds_pll.vhd
+--- cmv_hdmi3_preeti_orig/lvds_pll.vhd	2020-08-11 21:40:08.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/lvds_pll.vhd	2020-08-30 20:33:46.200251000 +0530
+@@ -33,6 +33,53 @@
+ end entity lvds_pll;
+ 
+ 
++architecture RTL_500MHZ of lvds_pll is
++
++    signal pll_fbout : std_logic;
++    signal pll_fbin : std_logic;
++
++    signal pll_lvds_clk : std_logic;
++    signal pll_word_clk : std_logic;
++
++begin
++    pll_inst : PLLE2_BASE
++    generic map (
++	CLKIN1_PERIOD => 4.0,
++	CLKFBOUT_MULT => 6,
++	CLKOUT0_DIVIDE => 1500/250,	-- 250MHz LVDS clock
++	CLKOUT1_DIVIDE => 1500/250*3,	-- 83.3MHz WORD clock
++	--
++	CLKOUT0_PHASE => 0.0,
++	CLKOUT1_PHASE => 0.0,
++	CLKOUT2_PHASE => 0.0,
++	--
++	DIVCLK_DIVIDE => 1 )
++    port map (
++	CLKIN1 => ref_clk_in,
++	CLKFBOUT => pll_fbout,
++	CLKFBIN => pll_fbin,
++	--
++	CLKOUT0 => pll_lvds_clk,
++	CLKOUT1 => pll_word_clk,
++	
++	LOCKED => pll_locked,
++	PWRDWN => '0',
++	RST => '0' );
++
++    pll_fbin <= pll_fbout;
++
++    BUFG_lvds_inst : BUFG
++	port map (
++	    I => pll_lvds_clk,
++	    O => lvds_clk );
++
++    BUFG_word_inst : BUFG
++	port map (
++	    I => pll_word_clk,
++	    O => word_clk );
++
++end RTL_500MHZ;
++
+ architecture RTL_300MHZ of lvds_pll is
+ 
+     signal pll_fbout : std_logic;
+diff -ru cmv_hdmi3_preeti_orig/pin_cmv_ibc.xdc cmv_hdmi3_preeti_rggb_conf/pin_cmv_ibc.xdc
+--- cmv_hdmi3_preeti_orig/pin_cmv_ibc.xdc	2020-08-11 21:40:08.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/pin_cmv_ibc.xdc	2020-08-29 22:27:48.877964000 +0530
+@@ -1,7 +1,7 @@
+ 
+ # create_clock -period 6.666 -name lvds_outclk -waveform {0.000 3.333} [get_ports cmv_lvds_outclk*]
+ # create_clock -period 7.5 -name lvds_outclk -waveform {0.000 3.75} [get_ports cmv_lvds_outclk*]
+-create_clock -period 8.000 -name lvds_outclk -waveform {0.000 4.000} [get_ports cmv_lvds_outclk_p]
++create_clock -period 4.000 -name lvds_outclk -waveform {0.000 2.000} [get_ports cmv_lvds_outclk_p]
+ 
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*]
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*] -clock_fall -add_delay
+diff -ru cmv_hdmi3_preeti_orig/pin_cmv_nab.xdc cmv_hdmi3_preeti_rggb_conf/pin_cmv_nab.xdc
+--- cmv_hdmi3_preeti_orig/pin_cmv_nab.xdc	2020-08-11 21:40:08.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/pin_cmv_nab.xdc	2020-08-29 22:27:55.761964000 +0530
+@@ -1,7 +1,7 @@
+ 
+ # create_clock -period 6.666 -name lvds_outclk -waveform {0.000 3.333} [get_ports cmv_lvds_outclk*]
+ # create_clock -period 7.5 -name lvds_outclk -waveform {0.000 3.75} [get_ports cmv_lvds_outclk*]
+-create_clock -period 8.000 -name lvds_outclk -waveform {0.000 4.000} [get_ports cmv_lvds_outclk_p]
++create_clock -period 4.000 -name lvds_outclk -waveform {0.000 2.000} [get_ports cmv_lvds_outclk_p]
+ 
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*]
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*] -clock_fall -add_delay
+diff -ru cmv_hdmi3_preeti_orig/pin_cmv.xdc cmv_hdmi3_preeti_rggb_conf/pin_cmv.xdc
+--- cmv_hdmi3_preeti_orig/pin_cmv.xdc	2020-08-11 21:40:08.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/pin_cmv.xdc	2020-08-29 22:27:48.877964000 +0530
+@@ -1,7 +1,7 @@
+ 
+ # create_clock -period 6.666 -name lvds_outclk -waveform {0.000 3.333} [get_ports cmv_lvds_outclk*]
+ # create_clock -period 7.5 -name lvds_outclk -waveform {0.000 3.75} [get_ports cmv_lvds_outclk*]
+-create_clock -period 8.000 -name lvds_outclk -waveform {0.000 4.000} [get_ports cmv_lvds_outclk_p]
++create_clock -period 4.000 -name lvds_outclk -waveform {0.000 2.000} [get_ports cmv_lvds_outclk_p]
+ 
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*]
+ # set_input_delay -clock pll_lvds_clk -max  3.0 [get_ports cmv_lvds_data*] -clock_fall -add_delay
+Only in cmv_hdmi3_preeti_rggb_conf/: pixel_remap_wrap.vhd
+diff -ru cmv_hdmi3_preeti_orig/top_pblock.xdc cmv_hdmi3_preeti_rggb_conf/top_pblock.xdc
+--- cmv_hdmi3_preeti_orig/top_pblock.xdc	2020-08-20 04:57:12.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/top_pblock.xdc	2020-08-29 21:57:23.941912000 +0530
+@@ -15,13 +15,13 @@
+ set_false_path -from [get_cells -hierarchical ping_a_d_reg*]
+ set_false_path -from [get_cells -hierarchical pong_b_d_reg*]
+ 
+-set_false_path -from [get_pins fifo_reset_inst*/shift_*/C]
++set_false_path -from [get_pins *fifo_reset_inst*/shift_*/C]
+ 
+ set_false_path -from [get_pins reg_file_inst*/oreg_*/C]
+ set_false_path -to [get_pins reg_file_inst*/rdata_*/D]
+ 
+-set_false_path -to [get_pins sync_*_inst*/shift_*/D]
+-# set_false_path -to [get_pins sync_*_inst/shift_*/PRE]
++set_false_path -to [get_pins *sync_*_inst*/shift_*/D]
++# set_false_path -to [get_pins *sync_*_inst/shift_*/PRE]
+ 
+ # set_multicycle_path 2 -from [get_pins phase_*/C] -to [get_pins shift_*/D]
+ # set_multicycle_path 1 -from [get_pins phase_*/C] -to [get_pins shift_*/D] -hold
+diff -ru cmv_hdmi3_preeti_orig/top.vhd cmv_hdmi3_preeti_rggb_conf/top.vhd
+--- cmv_hdmi3_preeti_orig/top.vhd	2020-08-26 03:13:54.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/top.vhd	2020-08-31 02:13:06.952832811 +0530
+@@ -245,6 +245,7 @@
+     signal cmv_pll_locked : std_ulogic;
+ 
+     signal cmv_lvds_clk : std_ulogic;
++    signal cmv_lvds_clk_oddr : std_ulogic;
+     signal cmv_cmd_clk : std_ulogic;
+     signal cmv_spi_clk : std_ulogic;
+     signal cmv_axi_clk : std_ulogic;
+@@ -305,6 +306,7 @@
+     signal par_data : par12_a (CHANNELS downto 0);
+     signal par_data_e : par12_a (CHANNELS downto 0);
+     signal par_data_o : par12_a (CHANNELS downto 0);
++    signal par_data_d : par12_a (CHANNELS - 1 downto 0);
+ 
+     alias par_ctrl : std_logic_vector (11 downto 0)
+ 	is par_data(CHANNELS);
+@@ -322,9 +324,6 @@
+     -- Remapper Signals
+     --------------------------------------------------------------------
+ 
+-    signal map_ctrl : std_logic_vector (11 downto 0);
+-    signal map_data : par12_a (CHANNELS - 1 downto 0);
+-
+     signal remap_ctrl : std_logic_vector (11 downto 0);
+     signal remap_data : par12_a (CHANNELS - 1 downto 0);
+ 
+@@ -1187,7 +1186,7 @@
+     -- CMV/LVDS/HDMI MMCM/PLL
+     --------------------------------------------------------------------
+ 
+-    cmv_pll_inst : entity work.cmv_pll (RTL_250MHZ)
++    cmv_pll_inst : entity work.cmv_pll (RTL_500MHZ)
+ 	port map (
+ 	    ref_clk_in => clk_100,
+ 	    --
+@@ -1201,7 +1200,7 @@
+ 
+     cmv_clk <= cmv_cmd_clk;
+ 
+-    lvds_pll_inst : entity work.lvds_pll (RTL_250MHZ)
++    lvds_pll_inst : entity work.lvds_pll (RTL_500MHZ)
+ 	port map (
+ 	    ref_clk_in => cmv_outclk,
+ 	    --
+@@ -1381,6 +1380,20 @@
+     -- LVDS Input and Deserializer
+     --------------------------------------------------------------------
+ 
++    ODDR_inst : ODDR
++	generic map(
++	    DDR_CLK_EDGE => "OPPOSITE_EDGE",	-- "OPPOSITE_EDGE" or "SAME_EDGE"
++	    INIT => '0',			-- Initial value for Q port ('1' or '0')
++	    SRTYPE => "SYNC")			-- Reset Type ("ASYNC" or "SYNC")
++	port map (
++	    Q => cmv_lvds_clk_oddr,			-- 1-bit DDR output
++	    C => cmv_lvds_clk,		-- 1-bit clock input
++	    CE => cmv_pll_locked,	-- 1-bit clock enable input
++	    D1 => '1',			-- 1-bit data input (positive edge)
++	    D2 => '0',			-- 1-bit data input (negative edge)
++	    R => '0',			-- 1-bit reset input
++	    S => '0' );			-- 1-bit set input
++
+     OBUFDS_inst : OBUFDS
+ 	generic map (
+ 	    IOSTANDARD => "LVDS_25",
+@@ -1388,7 +1401,7 @@
+ 	port map (
+ 	    O => cmv_lvds_clk_p,
+ 	    OB => cmv_lvds_clk_n,
+-	    I => cmv_lvds_clk );
++	    I => cmv_lvds_clk_oddr );
+ 
+     IBUFDS_inst : IBUFGDS_DIFF_OUT
+ 	generic map (
+@@ -1595,6 +1608,7 @@
+ 
+     begin
+ 	if rising_edge(serdes_clkdiv) then
++	    par_data_d <= par_data_o(CHANNELS - 1 downto CHANNELS / 2) & par_data_e(CHANNELS / 2 - 1 downto 0);
+ 	    par_valid_d <= del_v(vpos_v)(12);
+ 	    par_ctrl_d <= del_v(cpos_v)(11 downto 0);
+ 	    par_data_e <= dat_v(epos_v);
+@@ -1615,31 +1629,18 @@
+ 	end if;
+     end process;
+ 
+-    pixel_remap_even_inst : entity work.pixel_remap
+-	  generic map (
+-	    NB_LANES => CHANNELS/2 )
+-	  port map (
+-	    clk	     => serdes_clkdiv,
+-	    --
+-	    dv_par   => par_valid_d,
+-	    ctrl_in  => par_ctrl_d,
+-	    par_din  => par_data_e(15 downto 0),
+-	    --
+-	    ctrl_out => map_ctrl,
+-	    par_dout => map_data(15 downto 0) );
+-
+-    pixel_remap_odd_inst : entity work.pixel_remap
+-	  generic map (
+-	    NB_LANES => CHANNELS/2 )
+-	  port map (
+-	    clk	     => serdes_clkdiv,
+-	    --
+-	    dv_par   => par_valid_d,
+-	    ctrl_in  => par_ctrl_d,
+-	    par_din  => par_data_o(31 downto 16),
++    pixel_remap_inst0 : entity work.pixel_remap_wrap (BAYER_PATTERN)
++	generic map (
++	    CHANNELS => CHANNELS )
++	port map (
++	    clk	=> serdes_clkdiv,
++	    --
++	    par_valid => par_valid_d,
++	    par_ctrl  => par_ctrl_d,
++	    par_data  => par_data_d,
+ 	    --
+-	    ctrl_out => open,
+-	    par_dout => map_data(31 downto 16) );
++	    remap_ctrl => remap_ctrl,
++	    remap_data => remap_data );
+ 
+     valid_proc : process (serdes_clkdiv)
+     begin
+@@ -1652,36 +1653,12 @@
+ 	end if;
+     end process;
+ 
+-    remap_proc : process (serdes_clkdiv)
+-    begin
+-	if rising_edge(serdes_clkdiv) then
+-	    remap_ctrl <= map_ctrl;
+-	    remap_data <=
+-		map_data(30 downto 30) & map_data(31 downto 31) &
+-		map_data(14 downto 14) & map_data(15 downto 15) &
+-		map_data(28 downto 28) & map_data(29 downto 29) &
+-		map_data(12 downto 12) & map_data(13 downto 13) &
+-		map_data(26 downto 26) & map_data(27 downto 27) &
+-		map_data(10 downto 10) & map_data(11 downto 11) &
+-		map_data(24 downto 24) & map_data(25 downto 25) &
+-		map_data( 8 downto  8) & map_data( 9 downto  9) &
+-		map_data(22 downto 22) & map_data(23 downto 23) &
+-		map_data( 6 downto  6) & map_data( 7 downto  7) &
+-		map_data(20 downto 20) & map_data(21 downto 21) &
+-		map_data( 4 downto  4) & map_data( 5 downto  5) &
+-		map_data(18 downto 18) & map_data(19 downto 19) &
+-		map_data( 2 downto  2) & map_data( 3 downto  3) &
+-		map_data(16 downto 16) & map_data(17 downto 17) &
+-		map_data( 0 downto  0) & map_data( 1 downto  1);
+-	end if;
+-    end process;
+-
+     GEN_CHOP : for I in NUM_WRITERS - 1 downto 0 generate
+-	fifo_chop_inst : entity work.fifo_chop (RTL_SHIFT)
++	fifo_chop_inst : entity work.fifo_chop16 (RTL_SHIFT)
+ 	    port map (
+ 		par_clk => serdes_clk,
+ 		par_enable => par_enable,
+-		par_data => remap_data,
++		par_data => remap_data(I * 16 + 15 downto I * 16),
+ 		--
+ 		par_ctrl => remap_ctrl,
+ 		--
+diff -ru cmv_hdmi3_preeti_orig/top.xdc cmv_hdmi3_preeti_rggb_conf/top.xdc
+--- cmv_hdmi3_preeti_orig/top.xdc	2020-08-20 07:33:05.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/top.xdc	2020-08-30 22:53:22.016490000 +0530
+@@ -15,12 +15,12 @@
+ set_false_path -from [get_cells -hierarchical ping_a_d_reg*]
+ set_false_path -from [get_cells -hierarchical pong_b_d_reg*]
+ 
+-set_false_path -from [get_pins fifo_reset_inst*/shift_*/C]
++set_false_path -from [get_pins *fifo_reset_inst*/shift_*/C]
+ 
+ set_false_path -from [get_pins reg_file_inst*/oreg_*/C]
+ set_false_path -to [get_pins reg_file_inst*/rdata_*/D]
+ 
+-set_false_path -to [get_pins sync_*_inst*/shift_*/D]
++set_false_path -to [get_pins *sync_*_inst*/shift_*/D]
+ # set_false_path -to [get_pins sync_*_inst/shift_*/PRE]
+ 
+ # set_multicycle_path 2 -from [get_pins phase_*/C] -to [get_pins shift_*/D]
+diff -ru cmv_hdmi3_preeti_orig/vivado.tcl cmv_hdmi3_preeti_rggb_conf/vivado.tcl
+--- cmv_hdmi3_preeti_orig/vivado.tcl	2020-08-20 04:02:26.000000000 +0530
++++ cmv_hdmi3_preeti_rggb_conf/vivado.tcl	2020-08-31 00:30:50.392657492 +0530
+@@ -34,13 +34,15 @@
+ read_vhdl -vhdl2008 ../enc_ctrl.vhd
+ read_vhdl -vhdl2008 ../enc_tmds.vhd
+ read_vhdl -vhdl2008 ../enc_terc.vhd
+-read_vhdl -vhdl2008 ../fifo_chop.vhd
++#read_vhdl -vhdl2008 ../fifo_chop.vhd
++read_vhdl -vhdl2008 ../fifo_chop16.vhd
+ read_vhdl -vhdl2008 ../fifo_reset.vhd
+ read_vhdl -vhdl2008 ../hdmi_pll.vhd
+ read_vhdl -vhdl2008 ../lvds_pll.vhd
+ read_vhdl -vhdl2008 ../overlay.vhd
+ read_vhdl -vhdl2008 ../par_match.vhd
+ read_vhdl -vhdl2008 ../pixel_remap.vhd
++read_vhdl -vhdl2008 ../pixel_remap_wrap.vhd
+ read_vhdl -vhdl2008 ../pp_reg_sync.vhd
+ read_vhdl -vhdl2008 ../pp_sync.vhd
+ read_vhdl -vhdl2008 ../ps7_stub.vhd
