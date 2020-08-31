@@ -1,0 +1,796 @@
+--- finaleval/top.vhd	2020-08-17 05:10:00.000000000 +0530
++++ cmv_hdmi3_clean/top.vhd	2020-08-26 02:39:11.781665579 +0530
+@@ -276,6 +276,7 @@
+     --------------------------------------------------------------------
+ 
+     constant CHANNELS : natural := 32;
++    constant NUM_WRITERS : natural := 2;
+ 
+     signal idelay_valid : std_logic;
+ 
+@@ -423,7 +424,7 @@
+ 	is reg_oreg(15)(24 + 4 downto 24);
+ 
+ 
+-    constant IREG_SIZE : natural := 8;
++    constant IREG_SIZE : natural := 10;
+ 
+     signal led_done : std_logic;
+ 
+@@ -572,7 +573,7 @@
+     constant WADDR_MASK : addr_a(0 to 3) := 
+ 	( x"07FFFFFF", x"07FFFFFF", x"07FFFFFF", x"07FFFFFF" );
+     constant WADDR_BASE : addr_a(0 to 3) := 
+-	( x"18000000", x"20000000", x"18000000", x"20000000" );
++	( x"18000000", x"18004000", x"18000000", x"20000000" );
+ 
+     --------------------------------------------------------------------
+     -- Reader Constants and Signals
+@@ -612,21 +613,28 @@
+     -- Writer Constants and Signals
+     --------------------------------------------------------------------
+ 
+-    signal wdata_clk : std_logic;
+-    signal wdata_enable : std_logic;
+-    signal wdata_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
+-    signal wdata_empty : std_logic;
+-
+-    signal wdata_full : std_logic;
+-
+-    signal waddr_clk : std_logic;
+-    signal waddr_enable : std_logic;
+-    signal waddr_in : std_logic_vector (ADDR_WIDTH - 1 downto 0);
+-    signal waddr_empty : std_logic;
+-
+-    signal waddr_match : std_logic;
+-    signal waddr_sel : std_logic_vector (1 downto 0);
+-    signal waddr_sel_in : std_logic_vector (1 downto 0);
++    type data_t is array (natural range <>) of
++	std_logic_vector (DATA_WIDTH - 1 downto 0);
++    type addr_t is array (natural range <>) of
++	std_logic_vector (ADDR_WIDTH - 1 downto 0);
++    type sel_t is array (natural range <>) of
++	std_logic_vector (1 downto 0);
++
++    signal wdata_clk : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal wdata_enable : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal wdata_in : data_t (NUM_WRITERS - 1 downto 0);
++    signal wdata_empty : std_logic_vector (NUM_WRITERS - 1 downto 0);
++
++    signal wdata_full : std_logic_vector (NUM_WRITERS - 1 downto 0);
++
++    signal waddr_clk : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_enable : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_in : addr_t (NUM_WRITERS - 1 downto 0);
++    signal waddr_empty : std_logic_vector (NUM_WRITERS - 1 downto 0);
++ 
++    signal waddr_match : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_sel : sel_t (NUM_WRITERS - 1 downto 0);
++    signal waddr_sel_in : sel_t (NUM_WRITERS - 1 downto 0);
+ 
+     signal wbuf_sel : std_logic_vector (1 downto 0);
+ 
+@@ -638,63 +646,65 @@
+     signal writer_active : std_logic_vector (3 downto 0);
+     signal writer_unconf : std_logic_vector (3 downto 0);
+ 
+-    signal waddr_reset : std_logic;
+-    signal waddr_load : std_logic;
+-    signal waddr_switch : std_logic;
+-    signal waddr_block : std_logic;
++    signal waddr_reset : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_load : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_switch : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal waddr_block : std_logic_vector (NUM_WRITERS - 1 downto 0);
+ 
+     --------------------------------------------------------------------
+     -- Data FIFO Signals
+     --------------------------------------------------------------------
+ 
+-    signal fifo_data_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
+-    signal fifo_data_out : std_logic_vector (DATA_WIDTH - 1 downto 0);
++    signal fifo_data_in : data_t (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_out : data_t (NUM_WRITERS - 1 downto 0);
+ 
+     constant DATA_CWIDTH : natural := cwidth_f(DATA_WIDTH, "36Kb");
++    type dcwidth_t is array (natural range <>) of
++	std_logic_vector (DATA_CWIDTH - 1 downto 0);
+ 
+-    signal fifo_data_rdcount : std_logic_vector (DATA_CWIDTH - 1 downto 0);
+-    signal fifo_data_wrcount : std_logic_vector (DATA_CWIDTH - 1 downto 0);
++    signal fifo_data_rdcount : dcwidth_t (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_wrcount : dcwidth_t (NUM_WRITERS - 1 downto 0);
+ 
+-    signal fifo_data_wclk : std_logic;
+-    signal fifo_data_wen : std_logic;
+-    signal fifo_data_high : std_logic;
+-    signal fifo_data_full : std_logic;
+-    signal fifo_data_wrerr : std_logic;
+-
+-    signal fifo_data_rclk : std_logic;
+-    signal fifo_data_ren : std_logic;
+-    signal fifo_data_low : std_logic;
+-    signal fifo_data_empty : std_logic;
+-    signal fifo_data_rderr : std_logic;
+-
+-    signal fifo_data_rst : std_logic;
+-    signal fifo_data_rrdy : std_logic;
+-    signal fifo_data_wrdy : std_logic;
+-
+-    signal data_ctrl : std_logic_vector (11 downto 0);
+-    signal data_ctrl_d : std_logic_vector (11 downto 0);
+-
+-    alias data_dval : std_logic is data_ctrl(0);
+-    alias data_lval : std_logic is data_ctrl(1);
+-    alias data_fval : std_logic is data_ctrl(2);
+-
+-    alias data_dval_d : std_logic is data_ctrl_d(0);
+-    alias data_lval_d : std_logic is data_ctrl_d(1);
+-    alias data_fval_d : std_logic is data_ctrl_d(2);
+-
+-    alias data_fot : std_logic is data_ctrl(3);
+-    alias data_inte1 : std_logic is data_ctrl(4);
+-    alias data_inte2 : std_logic is data_ctrl(5);
++    signal fifo_data_wclk : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_wen : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_high : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_full : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_wrerr : std_logic_vector (NUM_WRITERS - 1 downto 0);
++
++    signal fifo_data_rclk : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_ren : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_low : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_empty : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_rderr : std_logic_vector (NUM_WRITERS - 1 downto 0);
++
++    signal fifo_data_rst : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_rrdy : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal fifo_data_wrdy : std_logic_vector (NUM_WRITERS - 1 downto 0);
++
++    signal data_ctrl : par12_a (NUM_WRITERS - 1 downto 0);
++    signal data_ctrl_d : par12_a (NUM_WRITERS - 1 downto 0);
++
++    alias data_dval : std_logic is data_ctrl(0)(0);
++    alias data_lval : std_logic is data_ctrl(0)(1);
++    alias data_fval : std_logic is data_ctrl(0)(2);
++
++    alias data_dval_d : std_logic is data_ctrl_d(0)(0);
++    alias data_lval_d : std_logic is data_ctrl_d(0)(1);
++    alias data_fval_d : std_logic is data_ctrl_d(0)(2);
++
++    alias data_fot : std_logic is data_ctrl(0)(3);
++    alias data_inte1 : std_logic is data_ctrl(0)(4);
++    alias data_inte2 : std_logic is data_ctrl(0)(5);
+ 
+-    signal match_en : std_logic;
++    signal match_en : std_logic_vector (NUM_WRITERS - 1 downto 0);
+     signal match_en_d : std_logic;
+ 
+-    signal data_wen : std_logic_vector (0 downto 0);
+-    signal data_wen_d : std_logic_vector (0 downto 0);
+-    signal data_wen_dd : std_logic_vector (0 downto 0);
++    signal data_wen : std_logic_vector (NUM_WRITERS - 1  downto 0);
++    signal data_wen_d : std_logic_vector (NUM_WRITERS - 1  downto 0);
++    signal data_wen_dd : std_logic_vector (NUM_WRITERS - 1  downto 0);
+ 
+-    signal data_in : std_logic_vector (DATA_WIDTH - 1 downto 0);
+-    signal data_in_d : std_logic_vector (DATA_WIDTH - 1 downto 0);
++    signal data_in : data_t (NUM_WRITERS - 1 downto 0);
++    signal data_in_d : data_t (NUM_WRITERS - 1 downto 0);
+ 
+     --------------------------------------------------------------------
+     -- HDMI FIFO Signals
+@@ -800,9 +810,6 @@
+     signal event_cg : std_logic_vector (11 downto 0);
+     signal event_cb : std_logic_vector (11 downto 0);
+ 
+-
+-
+-
+     --------------------------------------------------------------------
+     -- Capture Sequencer Signals
+     --------------------------------------------------------------------
+@@ -827,13 +834,13 @@
+     signal cseq_flip : std_logic;
+     signal cseq_switch : std_logic;
+ 
+-    signal sync_wblock : std_logic;
+-    signal sync_wreset : std_logic;
+-    signal sync_wload : std_logic;
+-    signal sync_wswitch : std_logic_vector (1 downto 0);
++    signal sync_wblock : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal sync_wreset : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal sync_wload : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal sync_wswitch : std_logic_vector (NUM_WRITERS * 2 - 1 downto 0);
+ 
+-    signal sync_wempty : std_logic;
+-    signal sync_winact : std_logic;
++    signal sync_wempty : std_logic_vector (NUM_WRITERS - 1 downto 0);
++    signal sync_winact : std_logic_vector (NUM_WRITERS - 1 downto 0);
+     signal sync_frmreq : std_logic;
+     signal sync_arm : std_logic;
+ 
+@@ -1166,7 +1173,7 @@
+     i2c1_scl_t <= not i2c1_scl_t_n;
+ 
+     PULLUP_sda_inst : PULLUP
+-        port map ( O => i2c_sda );
++	port map ( O => i2c_sda );
+ 
+     IOBUF_scl_inst : IOBUF
+ 	port map (
+@@ -1174,7 +1181,7 @@
+ 	    T => i2c1_scl_t, IO => i2c_scl );
+ 
+     PULLUP_scl_inst : PULLUP
+-        port map ( O => i2c_scl );
++	port map ( O => i2c_scl );
+ 
+     --------------------------------------------------------------------
+     -- CMV/LVDS/HDMI MMCM/PLL
+@@ -1318,16 +1325,21 @@
+     reg_ireg(1) <= usr_access;
+     reg_ireg(2) <= par_match(31 downto 0);
+     reg_ireg(3) <= par_mismatch(31 downto 0);
+-    reg_ireg(4) <= waddr_in(31 downto 0);
+-    reg_ireg(5) <= waddr_sel & "00" & writer_inactive &		-- 8bit
+-		   "00" & fifo_data_wrerr & fifo_data_rderr &	-- 4bit
+-		   fifo_data_full & fifo_data_high &		-- 2bit
+-		   fifo_data_low & fifo_data_empty &		-- 2bit
+-		   "000" & btn & swi;				-- 16bit
+-    reg_ireg(6) <= cseq_done & "000" & cseq_fcnt & 		-- 16bit
++    reg_ireg(4) <= waddr_in(0);
++    reg_ireg(5) <= waddr_in(1);
++    reg_ireg(6) <= waddr_sel(0) & "00" & writer_inactive(0) &		-- 8bit
++		   "00" & fifo_data_wrerr(0) & fifo_data_rderr(0) &	-- 4bit
++		   fifo_data_full(0) & fifo_data_high(0) &		-- 2bit
++		   fifo_data_low(0) & fifo_data_empty(0) &		-- 2bit
++		   "000" & btn & swi;					-- 16bit
++    reg_ireg(7) <= waddr_sel(1) & "00" & writer_inactive(1) &		-- 8bit
++		   "00" & fifo_data_wrerr(1) & fifo_data_rderr(1) &	-- 4bit
++		   fifo_data_full(1) & fifo_data_high(1) &		-- 2bit
++		   fifo_data_low(1) & fifo_data_empty(1);		-- 2bit		
++    reg_ireg(8) <= cseq_done & "000" & cseq_fcnt & 		-- 16bit
+ 		   par_match(32) & par_mismatch(32) & "00" &	-- 4bit
+ 		   par_data(32);
+-    reg_ireg(7) <= cseq_wblock & cseq_wreset & 			-- 2bit
++    reg_ireg(9) <= cseq_wblock & cseq_wreset & 			-- 2bit
+ 		   cseq_wload & cseq_wswitch &			-- 2bit
+ 		   cseq_wempty & cseq_frmreq &			-- 2bit
+ 		   cseq_flip & cseq_switch & x"000000";		-- 18bit
+@@ -1494,77 +1506,80 @@
+     -- Address Generator
+     --------------------------------------------------------------------
+ 
+-    waddr_gen_inst : entity work.addr_qbuf
+-	port map (
+-	    clk => waddr_clk,
+-	    reset => waddr_reset,
+-	    load => waddr_load,
+-	    enable => waddr_enable,
+-	    --
+-	    sel_in => waddr_sel_in,
+-	    switch => waddr_switch,
+-	    --
+-	    buf0_addr => waddr_buf0,
+-	    buf1_addr => waddr_buf1,
+-	    buf2_addr => waddr_buf2,
+-	    buf3_addr => waddr_buf3,
+-	    --
+-	    col_inc => waddr_cinc,
+-	    col_cnt => waddr_ccnt,
+-	    --
+-	    row_inc => waddr_rinc,
+-	    --
+-	    buf0_epat => waddr_pat0,
+-	    buf1_epat => waddr_pat1,
+-	    buf2_epat => waddr_pat2,
+-	    buf3_epat => waddr_pat3,
+-	    --
+-	    addr => waddr_in,
+-	    match => waddr_match,
+-	    sel => waddr_sel );
+-
+-    waddr_empty <= waddr_match or waddr_block;
+-
++    GEN_WADDR : for I in NUM_WRITERS - 1 downto 0 generate
++	waddr_gen_inst : entity work.addr_qbuf
++	    port map (
++		clk => waddr_clk(I),
++		reset => waddr_reset(I),
++		load => waddr_load(I),
++		enable => waddr_enable(I),
++		--
++		sel_in => waddr_sel_in(I),
++		switch => waddr_switch(I),
++		--
++		buf0_addr => waddr_buf0,
++		buf1_addr => waddr_buf1,
++		buf2_addr => waddr_buf2,
++		buf3_addr => waddr_buf3,
++		--
++		col_inc => waddr_cinc,
++		col_cnt => waddr_ccnt,
++		--
++		row_inc => waddr_rinc,
++		--
++		buf0_epat => waddr_pat0,
++		buf1_epat => waddr_pat1,
++		buf2_epat => waddr_pat2,
++		buf3_epat => waddr_pat3,
++		--
++		addr => waddr_in(I),
++		match => waddr_match(I),
++		sel => waddr_sel(I) );
++    
++	waddr_empty(I) <= waddr_match(I) or waddr_block(I);
++    end generate;
+     --------------------------------------------------------------------
+     -- Data FIFO
+     --------------------------------------------------------------------
+ 
+-    FIFO_data_inst : FIFO_DUALCLOCK_MACRO
+-	generic map (
+-	    DEVICE => "7SERIES",
+-	    DATA_WIDTH => DATA_WIDTH,
+-	    ALMOST_FULL_OFFSET => x"020",
+-	    ALMOST_EMPTY_OFFSET => x"020",
+-	    FIFO_SIZE => "36Kb",
+-	    FIRST_WORD_FALL_THROUGH => TRUE )
+-	port map (
+-	    DI => fifo_data_in,
+-	    WRCLK => fifo_data_wclk,
+-	    WREN => fifo_data_wen,
+-	    FULL => fifo_data_full,
+-	    ALMOSTFULL => fifo_data_high,
+-	    WRERR => fifo_data_wrerr,
+-	    WRCOUNT => fifo_data_wrcount,
+-	    --
+-	    DO => fifo_data_out,
+-	    RDCLK => fifo_data_rclk,
+-	    RDEN => fifo_data_ren,
+-	    EMPTY => fifo_data_empty,
+-	    ALMOSTEMPTY => fifo_data_low,
+-	    RDERR => fifo_data_rderr,
+-	    RDCOUNT => fifo_data_rdcount,
+-	    --
+-	    RST => fifo_data_rst );
+-
+-    fifo_reset_inst0 : entity work.fifo_reset
+-	port map (
+-	    rclk => fifo_data_rclk,
+-	    wclk => fifo_data_wclk,
+-	    reset => fifo_data_reset,
+-	    --
+-	    fifo_rst => fifo_data_rst,
+-	    fifo_rrdy => fifo_data_rrdy,
+-	    fifo_wrdy => fifo_data_wrdy );
++    GEN_FIFO : for I in NUM_WRITERS - 1 downto 0 generate
++	FIFO_data_inst : FIFO_DUALCLOCK_MACRO
++	    generic map (
++		DEVICE => "7SERIES",
++		DATA_WIDTH => DATA_WIDTH,
++		ALMOST_FULL_OFFSET => x"020",
++		ALMOST_EMPTY_OFFSET => x"020",
++		FIFO_SIZE => "36Kb",
++		FIRST_WORD_FALL_THROUGH => TRUE )
++	    port map (
++		DI => fifo_data_in(I),
++		WRCLK => fifo_data_wclk(I),
++		WREN => fifo_data_wen(I),
++		FULL => fifo_data_full(I),
++		ALMOSTFULL => fifo_data_high(I),
++		WRERR => fifo_data_wrerr(I),
++		WRCOUNT => fifo_data_wrcount(I),
++		 --
++		DO => fifo_data_out(I),
++		RDCLK => fifo_data_rclk(I),
++		RDEN => fifo_data_ren(I),
++		EMPTY => fifo_data_empty(I),
++		ALMOSTEMPTY => fifo_data_low(I),
++		RDERR => fifo_data_rderr(I),
++		RDCOUNT => fifo_data_rdcount(I),
++		 --
++		 RST => fifo_data_rst(I) );
++    
++	fifo_reset_inst0 : entity work.fifo_reset
++	    port map (
++		rclk => fifo_data_rclk(I),
++		wclk => fifo_data_wclk(I),
++		reset => fifo_data_reset,
++		--
++		fifo_rst => fifo_data_rst(I),
++		fifo_rrdy => fifo_data_rrdy(I),
++		fifo_wrdy => fifo_data_wrdy(I) );
++    end generate;
+ 
+ 
+     conf_delay_proc : process (serdes_clkdiv)
+@@ -1595,7 +1610,7 @@
+ 	    epos_v := to_index(reg_oreg(14)(23 downto 20));
+ 	    opos_v := to_index(reg_oreg(14)(19 downto 16));
+ 
+-            for I in 15 downto 1 loop
++	    for I in 15 downto 1 loop
+ 		del_v(I) := del_v(I-1);
+ 		dat_v(I) := dat_v(I-1);
+ 	    end loop; 
+@@ -1666,19 +1681,21 @@
+ 	end if;
+     end process;
+ 
+-    fifo_chop_inst : entity work.fifo_chop (RTL_SHIFT)
+-	port map (
+-	    par_clk => serdes_clk,
+-	    par_enable => par_enable,
+-	    par_data => remap_data,
+-	    --
+-	    par_ctrl => remap_ctrl,
+-	    --
+-	    fifo_clk => fifo_data_wclk,
+-	    fifo_enable => data_wen(0),
+-	    fifo_data => data_in,
+-	    --
+-	    fifo_ctrl => data_ctrl );
++    GEN_CHOP : for I in NUM_WRITERS - 1 downto 0 generate
++	fifo_chop_inst : entity work.fifo_chop (RTL_SHIFT)
++	    port map (
++		par_clk => serdes_clk,
++		par_enable => par_enable,
++		par_data => remap_data,
++		--
++		par_ctrl => remap_ctrl,
++		--
++		fifo_clk => fifo_data_wclk(I),
++		fifo_enable => data_wen(I),
++		fifo_data => data_in(I),
++		--
++		fifo_ctrl => data_ctrl(I) );
++    end generate;
+ 
+     chop_proc : process (serdes_clk, serdes_clkdiv, par_valid)
+ 	variable clkdiv_v : std_logic := '0';
+@@ -1694,102 +1711,104 @@
+ 	end if;
+     end process;
+ 
++    GEN_DELAY: for I in NUM_WRITERS - 1 downto 0 generate
++	delay_inst0 : entity work.sync_delay
++	    generic map (
++		STAGES => 2,
++		DATA_WIDTH => data_in(I)'length )
++	    port map (
++		clk => fifo_data_wclk(I),
++		data_in => data_in(I),
++		data_out => data_in_d(I) );
++
++
++	delay_inst1 : entity work.sync_delay
++	    generic map (
++		STAGES => 2,
++		DATA_WIDTH => data_ctrl(I)'length )
++	    port map (
++		clk => fifo_data_wclk(I),
++		data_in => data_ctrl(I),
++		data_out => data_ctrl_d(I) );
++
++   
++	delay_inst2 : entity work.sync_delay
++	    generic map (
++		STAGES => 2,
++		DATA_WIDTH => 1 )
++	    port map (
++		clk => fifo_data_wclk(I),
++		data_in => data_wen(I downto I),
++		data_out => data_wen_d(I downto I) );
++    end generate;
+ 
+-
+-
+-    delay_inst0 : entity work.sync_delay
+-	generic map (
+-	    STAGES => 2,
+-	    DATA_WIDTH => data_in'length )
+-	port map (
+-	    clk => fifo_data_wclk,
+-	    data_in => data_in,
+-	    data_out => data_in_d );
+-
+-
+-    delay_inst1 : entity work.sync_delay
+-	generic map (
+-	    STAGES => 2,
+-	    DATA_WIDTH => data_ctrl'length )
+-	port map (
+-	    clk => fifo_data_wclk,
+-	    data_in => data_ctrl,
+-	    data_out => data_ctrl_d );
+-
+-    delay_inst2 : entity work.sync_delay
+-	generic map (
+-	    STAGES => 2,
+-	    DATA_WIDTH => 1 )
+-	port map (
+-	    clk => fifo_data_wclk,
+-	    data_in => data_wen,
+-	    data_out => data_wen_d );
+-
+-
+-    match_en <= data_wen_d(0)
+-	when (data_ctrl_d(2 downto 0) and reg_mask) = reg_mval
+-	else '0';
+-
+-    cmv_active <= or_reduce(data_ctrl_d(2 downto 0) and reg_amsk);
+-
+-    -- data_rcn <= data_in;
+-    -- data_in_c(63 downto 16) <= data_in(63 downto 16);
+-
+-
+-    -- data_rcn_wen <= data_wen_dd(0) and match_en_d;
+-
+-    -- fifo_data_wclk <= iserdes_clk;
+-    fifo_data_wen <= match_en when fifo_data_wrdy = '1' else '0';
+-    wdata_full <= fifo_data_full when fifo_data_wrdy = '1' else '1';
+-    fifo_data_in <= data_in_d;
+-
+-    fifo_data_rclk <= wdata_clk;
+-    fifo_data_ren <=
+-	wdata_enable and not fifo_data_empty when
+-	    fifo_data_rrdy = '1' else '0';
+-    wdata_empty <=
+-	fifo_data_low when
+-	    fifo_data_rrdy = '1' and sync_wempty = '0' else
+-	'0' when 
+-	    fifo_data_rrdy = '1' and sync_wempty = '1' else '1';
+-    wdata_in <= fifo_data_out;
+-
++    GEN_FIFO_CTRL : for I in NUM_WRITERS - 1 downto 0 generate
++	match_en(I) <= data_wen_d(I)
++	    when (data_ctrl_d(0)(2 downto 0) and reg_mask) = reg_mval
++	    else '0';
++    
++	cmv_active <= or_reduce(data_ctrl_d(0)(2 downto 0) and reg_amsk);
++    
++	-- data_rcn <= data_in;
++	-- data_in_c(63 downto 16) <= data_in(63 downto 16);
++    
++    
++	-- data_rcn_wen <= data_wen_dd(0) and match_en_d;
++    
++	-- fifo_data_wclk <= iserdes_clk;
++	fifo_data_wen(I) <= match_en(I) when fifo_data_wrdy(I) = '1' else '0';
++	wdata_full(I) <= fifo_data_full(I) when fifo_data_wrdy(I) = '1' else '1';
++	fifo_data_in(I) <= data_in_d(I);
++    
++	fifo_data_rclk(I) <= wdata_clk(I);
++	fifo_data_ren(I) <=
++	    wdata_enable(I) and not fifo_data_empty(I) when
++		fifo_data_rrdy(I) = '1' else '0';
++	wdata_empty(I) <=
++	    fifo_data_low(I) when
++		fifo_data_rrdy(I) = '1' and sync_wempty(0) = '0' and sync_wempty(1) = '0' else
++		'0' when 
++		fifo_data_rrdy(I) = '1' and sync_wempty(0) = '1' and sync_wempty(1) = '1' else '1';
++	wdata_in(I) <= fifo_data_out(I);
++    end generate;
+     --------------------------------------------------------------------
+     -- AXIHP Writer
+     --------------------------------------------------------------------
+ 
+-    axihp_writer_inst : entity work.axihp_writer
+-	generic map (
+-	    DATA_WIDTH => 64,
+-	    DATA_COUNT => 16,
+-	    ADDR_MASK => WADDR_MASK(0),
+-	    ADDR_DATA => WADDR_BASE(0) )
+-	port map (
+-	    m_axi_aclk => writer_clk,		-- in
+-	    m_axi_areset_n => s_axi_areset_n(0), -- in
+-	    enable => writer_enable(0),		-- in
+-	    inactive => writer_inactive(0),	-- out
+-	    --
+-	    m_axi_wo => s_axi_wi(0),
+-	    m_axi_wi => s_axi_wo(0),
+-	    --
+-	    addr_clk => waddr_clk,		-- out
+-	    addr_enable => waddr_enable,	-- out
+-	    addr_in => waddr_in,		-- in
+-	    addr_empty => waddr_empty,		-- in
+-	    --
+-	    data_clk => wdata_clk,		-- out
+-	    data_enable => wdata_enable,	-- out
+-	    data_in => wdata_in,		-- in
+-	    data_empty => wdata_empty,		-- in
+-	    --
+-	    write_strobe => write_strobe,	-- in
+-	    --
+-	    writer_error => writer_error(0),	-- out
+-	    writer_active => writer_active,	-- out
+-	    writer_unconf => writer_unconf );	-- out
+-
+-    s_axi_aclk(0) <= writer_clk;
++    GEN_WRITER : for I in NUM_WRITERS - 1 downto 0 generate
++	axihp_writer_inst : entity work.axihp_writer
++	    generic map (
++		DATA_WIDTH => 64,
++		DATA_COUNT => 16,
++		ADDR_MASK => WADDR_MASK(0),
++		ADDR_DATA => WADDR_BASE(I) )
++	    port map (
++		m_axi_aclk => writer_clk,		
++		m_axi_areset_n => s_axi_areset_n(I), 
++		enable => writer_enable(I),		
++		inactive => writer_inactive(I),	
++		--
++		m_axi_wo => s_axi_wi(I),
++		m_axi_wi => s_axi_wo(I),
++		--
++		addr_clk => waddr_clk(I),
++		addr_enable => waddr_enable(I),	
++		addr_in => waddr_in(I),		
++		addr_empty => waddr_empty(I),	
++		--
++		data_clk => wdata_clk(I),
++		data_enable => wdata_enable(I),	
++		data_in => wdata_in(I),		
++		data_empty => wdata_empty(I),		
++		--
++		write_strobe => write_strobe,	
++		--
++		writer_error => writer_error(I),	
++		writer_active => writer_active,	
++		writer_unconf => writer_unconf );	
++    
++	s_axi_aclk(I) <= writer_clk;
++    end generate;
+ 
+     --------------------------------------------------------------------
+     -- Capture Sequencer
+@@ -1853,7 +1872,7 @@
+ 
+ 		if shift_v(0) = '0' then
+ 		    -- wait for inactive writer
+-		    if shift_v(9) = '1' and sync_winact = '0' then
++		    if shift_v(9) = '1' and sync_winact(0) = '0' and sync_winact(1) = '0' then
+ 			null;
+ 
+ 		    -- wait for capture complete
+@@ -1928,16 +1947,16 @@
+ 	    data_in => rbuf_sel,
+ 	    data_out => raddr_sel_in );
+ 
+-    sync_wbuf_sel_inst : entity work.sync_delay
+-	generic map (
+-	    STAGES => 1,
+-	    DATA_WIDTH => wbuf_sel'length )
+-	port map (
+-	    clk => waddr_clk,
+-	    data_in => wbuf_sel,
+-	    data_out => waddr_sel_in );
+-
+-
++    GEN_SYNC_WBUF: for I in NUM_WRITERS - 1 downto 0 generate
++	sync_wbuf_sel_inst : entity work.sync_delay
++	    generic map (
++		STAGES => 1,
++		DATA_WIDTH => wbuf_sel'length )
++	    port map (
++		clk => waddr_clk(I),
++		data_in => wbuf_sel,
++		data_out => waddr_sel_in(I) );
++    end generate;
+ 
+     cseq_prio_proc : process (cseq_shift)
+     begin
+@@ -1996,53 +2015,55 @@
+     --------------------------------------------------------------------
+     -- Capture Event Synchronizers
+     --------------------------------------------------------------------
+-
+-    sync_wblock_inst : entity work.data_sync
+-	port map (
+-	    clk => waddr_clk,
+-	    async_in => cseq_wblock,
+-	    sync_out => sync_wblock );
+-
+-    sync_wreset_inst : entity work.pulse_sync
+-	port map (
+-	    clk => waddr_clk,
+-	    async_in => cseq_wreset,
+-	    sync_out => sync_wreset );
+-
+-    sync_wload_inst : entity work.pulse_sync
+-	port map (
+-	    clk => waddr_clk,
+-	    async_in => cseq_wload,
+-	    sync_out => sync_wload );
+-
+-    sync_wswitch_inst0 : entity work.pulse_sync
+-	port map (
+-	    clk => waddr_clk,
+-	    async_in => cseq_switch,
+-	    sync_out => sync_wswitch(0) );
+-
+-    sync_wswitch_inst1 : entity work.pulse_sync
+-	port map (
+-	    clk => waddr_clk,
+-	    async_in => oreg_wswitch,
+-	    sync_out => sync_wswitch(1) );
+-
+-    waddr_block <= sync_wblock or oreg_wblock;
+-    waddr_reset <= sync_wreset or oreg_wreset;
+-    waddr_load <= sync_wload or oreg_wload;
+-    waddr_switch <= or_reduce(sync_wswitch);
+-
+-    sync_wempty_inst : entity work.data_sync
+-	port map (
+-	    clk => wdata_clk,
+-	    async_in => cseq_wempty,
+-	    sync_out => sync_wempty );
+-
+-    sync_winact_inst : entity work.data_sync
+-	port map (
+-	    clk => cseq_clk,
+-	    async_in => writer_inactive(0),
+-	    sync_out => sync_winact );
++    GEN_SYNC: for I in NUM_WRITERS - 1 downto 0 generate
++	sync_wblock_inst : entity work.data_sync
++	    port map (
++		clk => waddr_clk(I),
++		async_in => cseq_wblock,
++		sync_out => sync_wblock(I) );
++
++	sync_wreset_inst : entity work.pulse_sync
++	    port map (
++		clk => waddr_clk(I),
++		async_in => cseq_wreset,
++		sync_out => sync_wreset(I) );
++
++	sync_wload_inst : entity work.pulse_sync
++	    port map (
++		clk => waddr_clk(I),
++		async_in => cseq_wload,
++		sync_out => sync_wload(I) );
++
++	sync_wswitch_inst0 : entity work.pulse_sync
++	    port map (
++		clk => waddr_clk(I),
++		async_in => cseq_switch,
++		sync_out => sync_wswitch(I * 2) );
++		
++	sync_wswitch_inst1 : entity work.pulse_sync
++	    port map (
++		clk => waddr_clk(I),
++		async_in => oreg_wswitch,
++		sync_out => sync_wswitch((I + 1) * 2 - 1) );
++
++
++	waddr_block(I) <= sync_wblock(I) or oreg_wblock;
++	waddr_reset(I) <= sync_wreset(I) or oreg_wreset;
++	waddr_load(I) <= sync_wload(I) or oreg_wload;
++	waddr_switch(I) <= or_reduce(sync_wswitch((I + 1)* 2 - 1 downto I * 2));
++
++	sync_wempty_inst : entity work.data_sync
++	    port map (
++		clk => wdata_clk(I),
++		async_in => cseq_wempty,
++		sync_out => sync_wempty(I) );
++	    
++	sync_winact_inst : entity work.data_sync
++	    port map (
++		clk => cseq_clk,
++		async_in => writer_inactive(I),
++		sync_out => sync_winact(I) );
++    end generate;
+ 
+     sync_frmreq_inst0 : entity work.pulse_sync
+ 	port map (
+@@ -2089,7 +2110,7 @@
+     led_out(2) <= hdmi_pll_locked;
+ 
+     led_out(3) <= cmv_active;
+-    led_out(4) <= wdata_full;
++    led_out(4) <= wdata_full(0);
+ 
+     div_hdmi_inst : entity work.async_div
+ 	generic map (
