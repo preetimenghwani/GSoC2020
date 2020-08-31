@@ -1,0 +1,148 @@
+diff -Nru axiom-firmware.orig/peripherals/soc_main/pixel_remap.vhd axiom-firmware/peripherals/soc_main/pixel_remap.vhd
+--- axiom-firmware.orig/peripherals/soc_main/pixel_remap.vhd	2020-08-31 18:16:22.495681004 +0530
++++ axiom-firmware/peripherals/soc_main/pixel_remap.vhd	2020-08-31 18:19:09.415672287 +0530
+@@ -104,7 +104,8 @@
+ 	par_din	   : in	 par12_a (NB_LANES-1 downto 0);
+ 
+ 	ctrl_out   : out std_logic_vector (12 - 1 downto 0);
+-	par_dout   : out par12_a (NB_LANES-1 downto 0) );
++	par_dout   : out par12_a (NB_LANES-1 downto 0);
++	row_reordering  : out unsigned(0 downto 0) := (others => '0') );
+ end entity;
+ 
+ 
+@@ -204,6 +205,9 @@
+     signal lval_delay	: std_logic_vector(2 downto 0);
+     signal dval_delay	: std_logic_vector(2 downto 0);
+ 
++    signal lval_count    : unsigned(0 downto 0) := (others => '0');
++    signal lval_out_prev : std_logic := '0';
++
+     --
+ 
+     alias fval_in	: std_logic is ctrl_in(2);
+@@ -639,6 +643,29 @@
+     ctrl_out(ctrl_out'high downto 3) <= (others => '0');
+ 
+     -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++    -- reordering of channels for y subsampling according to the value of
++    -- row reordering
++
++    row_reordering <= lval_count;
++
++    process(clk)
++    begin
++	if rising_edge(clk) then
++	    if fval_delay(fval_delay'high) = '0' then
++		lval_count <= "0";
++		lval_out_prev <= '0';
++
++	    else
++		lval_out_prev <= lval_delay(lval_delay'high);
++		if lval_out_prev = '1' and lval_delay(lval_delay'high) = '0' then
++		    lval_count <= not lval_count;
++
++		end if;
++	    end if;
++	end if;
++    end process;
++
++    -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+     gen_all_mem: for i in 0 to NB_MEM - 1 generate
+ 	ram_data0 : entity work.ram_sdp_reg
+diff -Nru axiom-firmware.orig/peripherals/soc_main/top.vhd axiom-firmware/peripherals/soc_main/top.vhd
+--- axiom-firmware.orig/peripherals/soc_main/top.vhd	2020-08-31 18:16:22.495681004 +0530
++++ axiom-firmware/peripherals/soc_main/top.vhd	2020-08-31 18:24:55.379654220 +0530
+@@ -330,6 +330,7 @@
+     signal remap_data : par12_a (CHANNELS - 1 downto 0);
+ 
+     signal chop_enable : std_logic;
++    signal row_reordering : unsigned(0 downto 0) := (others => '0');
+ 
+     --------------------------------------------------------------------
+     -- CMV Register File Signals
+@@ -1721,7 +1722,9 @@
+ 	    par_din  => par_data_e(15 downto 0),
+ 	    --
+ 	    ctrl_out => map_ctrl,
+-	    par_dout => map_data(15 downto 0) );
++	    par_dout => map_data(15 downto 0),
++	    --
++	    row_reordering => row_reordering );
+ 
+     pixel_remap_odd_inst : entity work.pixel_remap
+ 	  generic map (
+@@ -1734,7 +1737,9 @@
+ 	    par_din  => par_data_o(31 downto 16),
+ 	    --
+ 	    ctrl_out => open,
+-	    par_dout => map_data(31 downto 16) );
++	    par_dout => map_data(31 downto 16),
++	    --
++	    row_reordering => open );
+ 
+     valid_proc : process (serdes_clkdiv)
+     begin
+@@ -1751,23 +1756,44 @@
+     begin
+ 	if rising_edge(serdes_clkdiv) then
+ 	    remap_ctrl <= map_ctrl;
+-	    remap_data <=
+-		map_data(30 downto 30) & map_data(31 downto 31) &
+-		map_data(14 downto 14) & map_data(15 downto 15) &
+-		map_data(28 downto 28) & map_data(29 downto 29) &
+-		map_data(12 downto 12) & map_data(13 downto 13) &
+-		map_data(26 downto 26) & map_data(27 downto 27) &
+-		map_data(10 downto 10) & map_data(11 downto 11) &
+-		map_data(24 downto 24) & map_data(25 downto 25) &
+-		map_data( 8 downto  8) & map_data( 9 downto  9) &
+-		map_data(22 downto 22) & map_data(23 downto 23) &
+-		map_data( 6 downto  6) & map_data( 7 downto  7) &
+-		map_data(20 downto 20) & map_data(21 downto 21) &
+-		map_data( 4 downto  4) & map_data( 5 downto  5) &
+-		map_data(18 downto 18) & map_data(19 downto 19) &
+-		map_data( 2 downto  2) & map_data( 3 downto  3) &
+-		map_data(16 downto 16) & map_data(17 downto 17) &
+-		map_data( 0 downto  0) & map_data( 1 downto  1);
++	    if row_reordering = 0 then
++		remap_data <=
++		    map_data(30 downto 30) & map_data(31 downto 31) &
++		    map_data(14 downto 14) & map_data(15 downto 15) &
++		    map_data(28 downto 28) & map_data(29 downto 29) &
++		    map_data(12 downto 12) & map_data(13 downto 13) &
++		    map_data(26 downto 26) & map_data(27 downto 27) &
++		    map_data(10 downto 10) & map_data(11 downto 11) &
++		    map_data(24 downto 24) & map_data(25 downto 25) &
++		    map_data( 8 downto  8) & map_data( 9 downto  9) &
++		    map_data(22 downto 22) & map_data(23 downto 23) &
++		    map_data( 6 downto  6) & map_data( 7 downto  7) &
++		    map_data(20 downto 20) & map_data(21 downto 21) &
++		    map_data( 4 downto  4) & map_data( 5 downto  5) &
++		    map_data(18 downto 18) & map_data(19 downto 19) &
++		    map_data( 2 downto  2) & map_data( 3 downto  3) &
++		    map_data(16 downto 16) & map_data(17 downto 17) &
++		    map_data( 0 downto  0) & map_data( 1 downto  1);
++
++	    else
++		remap_data <=
++		    map_data(30 downto 30) & map_data(31 downto 31) &
++		    map_data(14 downto 14) & map_data(15 downto 15) &
++		    map_data(28 downto 28) & map_data(29 downto 29) &
++		    map_data(12 downto 12) & map_data(13 downto 13) &
++		    map_data(26 downto 26) & map_data(27 downto 27) &
++		    map_data(10 downto 10) & map_data(11 downto 11) &
++		    map_data(24 downto 24) & map_data(25 downto 25) &
++		    map_data( 8 downto  8) & map_data( 9 downto  9) &
++		    map_data(22 downto 22) & map_data(23 downto 23) &
++		    map_data( 6 downto  6) & map_data( 7 downto  7) &
++		    map_data(20 downto 20) & map_data(21 downto 21) &
++		    map_data( 4 downto  4) & map_data( 5 downto  5) &
++		    map_data(18 downto 18) & map_data(19 downto 19) &
++		    map_data( 2 downto  2) & map_data( 3 downto  3) &
++		    map_data(16 downto 16) & map_data(17 downto 17) &
++		    map_data( 0 downto  0) & map_data( 1 downto  1);
++	    end if;
+ 	end if;
+     end process;
+ 
